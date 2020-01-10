@@ -1,0 +1,128 @@
+#!/bin/sh
+
+echo "
+------------------------
+ SHELL RSS TORRENT v1.0
+   Script by Rafostar
+------------------------
+"
+
+INDENT1="  "
+INDENT2="     "
+
+parse_config() {
+    WatchDir=$(xmllint_from_config "string(//config/watchdir[1]/text())")
+    if [ -z "$WatchDir" ]
+    then
+        echo "Error: no <watchdir> in XML file"
+    else
+        echo "Torrents will be downloaded to: $WatchDir"
+
+        HistoryPath=$(xmllint_from_config "string(//config/history[1]/text())")
+        if [ ! -z "$HistoryPath" ]
+        then
+            echo "Using download history file: $HistoryPath"
+        fi
+
+        FeedsCount=$(xmllint_from_config "count(//config/feed)")
+        echo "Total feeds in config: $FeedsCount"
+        echo ""
+
+        for (( feed=1; feed<=$FeedsCount; feed++ ))
+        do
+            FeedUrl=$(xmllint_from_config "string(//config/feed[$feed]/url[1]/text())")
+
+            if [ -z "$FeedUrl" ]
+            then
+                echo "Error: feed $feed has no URL"
+            else
+                FeedData=$(wget -q -O - "$FeedUrl")
+
+                if [ -z "$FeedData" ]
+                then
+                    echo "Error: feed $feed has no data"
+                else
+                    echo "feed $feed: $FeedUrl"
+
+                    for fn in "contains" "starts-with"
+                    do
+                        find_in_feed $feed $fn
+                    done
+                fi
+            fi
+        done
+    fi
+}
+
+find_in_feed() {
+    QueryFn=$2
+    QueryCount=$(xmllint_from_config "count(//config/feed[$1]/$QueryFn)")
+
+    if [ ! -z "$QueryCount" ] && [ "$QueryCount" -ge 1 ]
+    then
+        for (( query=1; query<=$QueryCount; query++ ))
+        do
+            QueryText=$(xmllint_from_config "string(//config/feed[$1]/$QueryFn[$query]/text())")
+            TorrentCount=$(xmllint_from_feed "count(//item[title[$QueryFn(., '$QueryText')]]/link)")
+
+            if [ ! -z "$TorrentCount" ]
+            then
+                echo "$INDENT1 $QueryFn $query: $QueryText, found: $TorrentCount"
+
+                if [ "$TorrentCount" -ge 1 ] && [ ! -z "$HistoryPath" ] && [ -f "$HistoryPath" ]
+                then
+                    HistoryData=$(cat "$HistoryPath")
+                fi
+
+                for (( torrent=1; torrent<=$TorrentCount; torrent++ ))
+                do
+                    TorrentLink=$(xmllint_from_feed "string(//item[title[$QueryFn(., '$QueryText')]][$torrent]/link/text())")
+
+                    if [ ! -z "$HistoryData" ]
+                    then
+                        case "$HistoryData" in
+                            *"$TorrentLink"*) echo "$INDENT2 torrent $torrent in download history" ;;
+                            *) download_torrent "$TorrentLink" ;;
+                        esac
+                    else
+                        download_torrent "$TorrentLink"
+                    fi
+                done
+            fi
+        done
+    fi
+}
+
+xmllint_from_config() {
+    RESULT=$(xmllint --xpath "$1" "$ConfigPath" 2> /dev/null)
+    echo "$RESULT"
+}
+
+xmllint_from_feed() {
+    RESULT=$(echo "$FeedData" | xmllint --format --xpath "$1" - 2> /dev/null)
+    echo "$RESULT"
+}
+
+download_torrent() {
+    echo "$INDENT2 torrent $torrent: $1"
+    wget -q --content-disposition -P "$WatchDir" "$1"
+
+    if [ ! -z "$HistoryPath" ]
+    then
+        echo "$1" >> "$HistoryPath"
+    fi
+}
+
+ConfigPath=$1
+if [ -z "$ConfigPath" ]
+then
+    ME=$(basename "$0")
+    echo "Usage: $ME <config_path>"
+else
+    if [ -f "$ConfigPath" ]
+    then
+        parse_config
+    else
+        echo "Error: file $ConfigPath does not exist"
+    fi
+fi
