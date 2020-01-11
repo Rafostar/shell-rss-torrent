@@ -2,15 +2,15 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.3
+ SHELL RSS TORRENT v1.4
    Script by Rafostar
 ------------------------
 "
 
 INDENT1="  "
 INDENT2="     "
-UPPER="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-LOWER="abcdefghijklmnopqrstuvwxyz"
+UPPER="ABCDEFGHIJKLMNOPQRSTUVWXYZ/ĄĆĘŁŃÓŚŹŻ"
+LOWER="abcdefghijklmnopqrstuvwxyz/ąćęłńóśźż"
 
 parse_config() {
     WatchDir=$(xmllint_from_config "string(//config/watchdir[1]/text())")
