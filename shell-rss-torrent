@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.0
+ SHELL RSS TORRENT v1.1
    Script by Rafostar
 ------------------------
 "
@@ -103,13 +103,26 @@ xmllint_from_feed() {
     echo "$RESULT"
 }
 
-download_torrent() {
-    echo "$INDENT2 torrent $torrent: $1"
-    wget -q --content-disposition -P "$WatchDir" "$1"
-
+write_to_history() {
     if [ ! -z "$HistoryPath" ]
     then
         echo "$1" >> "$HistoryPath"
+    fi
+}
+
+download_torrent() {
+    echo "$INDENT2 torrent $torrent: $1"
+
+    wget -q --content-disposition -P "$WatchDir" "$1" 2> /dev/null
+    if [ $? -ne 0 ]
+    then
+        wget -q -P "$WatchDir" "$1" 2> /dev/null
+        if [ $? -eq 0 ]
+        then
+            write_to_history "$1"
+        fi
+    else
+        write_to_history "$1"
     fi
 }
 
