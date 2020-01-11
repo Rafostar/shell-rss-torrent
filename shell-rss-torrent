@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.1
+ SHELL RSS TORRENT v1.2
    Script by Rafostar
 ------------------------
 "
@@ -22,6 +22,11 @@ parse_config() {
         if [ ! -z "$HistoryPath" ]
         then
             echo "Using download history file: $HistoryPath"
+
+            if [ -f "$HistoryPath" ]
+            then
+                HistoryData=$(cat "$HistoryPath")
+            fi
         fi
 
         FeedsCount=$(xmllint_from_config "count(//config/feed)")
@@ -69,11 +74,6 @@ find_in_feed() {
             then
                 echo "$INDENT1 $QueryFn $query: $QueryText, found: $TorrentCount"
 
-                if [ "$TorrentCount" -ge 1 ] && [ ! -z "$HistoryPath" ] && [ -f "$HistoryPath" ]
-                then
-                    HistoryData=$(cat "$HistoryPath")
-                fi
-
                 for (( torrent=1; torrent<=$TorrentCount; torrent++ ))
                 do
                     TorrentLink=$(xmllint_from_feed "string(//item[title[$QueryFn(., '$QueryText')]][$torrent]/link/text())")
@@ -108,6 +108,8 @@ write_to_history() {
     then
         echo "$1" >> "$HistoryPath"
     fi
+
+    HistoryData=$(echo -e "$HistoryData\n$1")
 }
 
 download_torrent() {

@@ -9,7 +9,7 @@ The script is intended to be used with a torrent client that supports importing 
 
 Remember to mark this script as executable after download (`chmod +x ./shell-rss-torrent`).
 
-Specify path to the watch dir in config file with `<watchdir>`. You can optionally use `<history>` with a path to the file that will store this script download history, so the same torrent won't be downloaded more than once.
+Specify path to the watch dir in config file with `<watchdir>`. You can optionally use `<history>` with a path to the file that will store this script download history, so the script won't download the same torrent on the next run.
 
 To make this script work on OpenWRT you need to install `libxml2` (available in official OpenWRT packages). The script should work with the simplified busybox version of `wget`, but the full version will support more websites.
 
