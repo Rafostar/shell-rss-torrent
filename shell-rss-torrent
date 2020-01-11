@@ -2,13 +2,15 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.2
+ SHELL RSS TORRENT v1.3
    Script by Rafostar
 ------------------------
 "
 
 INDENT1="  "
 INDENT2="     "
+UPPER="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+LOWER="abcdefghijklmnopqrstuvwxyz"
 
 parse_config() {
     WatchDir=$(xmllint_from_config "string(//config/watchdir[1]/text())")
@@ -49,9 +51,9 @@ parse_config() {
                 else
                     echo "feed $feed: $FeedUrl"
 
-                    for fn in "contains" "starts-with"
+                    for QueryFn in "contains" "starts-with"
                     do
-                        find_in_feed $feed $fn
+                        find_in_feed $feed
                     done
                 fi
             fi
@@ -59,16 +61,30 @@ parse_config() {
     fi
 }
 
+check_attributes() {
+    QueryText=$(xmllint_from_config "string($QueryPath[$query]/text())")
+    IgnoreCase=$(xmllint_from_config "count($QueryPath[$query][@ignore-case='1'])")
+
+    if [ "$IgnoreCase" -eq 1 ]
+    then
+        ParsedQuery=$(xmllint_from_config "translate($QueryPath[$query]/text(), '$UPPER', '$LOWER')")
+        Matches="//item[title[$QueryFn(translate(., '$UPPER', '$LOWER'), '$ParsedQuery')]]"
+        TorrentCount=$(xmllint_from_feed "count($Matches/link)")
+    else
+        Matches="//item[title[$QueryFn(., '$QueryText')]]"
+        TorrentCount=$(xmllint_from_feed "count($Matches/link)")
+    fi
+}
+
 find_in_feed() {
-    QueryFn=$2
-    QueryCount=$(xmllint_from_config "count(//config/feed[$1]/$QueryFn)")
+    QueryPath="//config/feed[$1]/$QueryFn"
+    QueryCount=$(xmllint_from_config "count($QueryPath)")
 
     if [ ! -z "$QueryCount" ] && [ "$QueryCount" -ge 1 ]
     then
         for (( query=1; query<=$QueryCount; query++ ))
         do
-            QueryText=$(xmllint_from_config "string(//config/feed[$1]/$QueryFn[$query]/text())")
-            TorrentCount=$(xmllint_from_feed "count(//item[title[$QueryFn(., '$QueryText')]]/link)")
+            check_attributes $1
 
             if [ ! -z "$TorrentCount" ]
             then
@@ -76,7 +92,7 @@ find_in_feed() {
 
                 for (( torrent=1; torrent<=$TorrentCount; torrent++ ))
                 do
-                    TorrentLink=$(xmllint_from_feed "string(//item[title[$QueryFn(., '$QueryText')]][$torrent]/link/text())")
+                    TorrentLink=$(xmllint_from_feed "string($Matches[$torrent]/link/text())")
 
                     if [ ! -z "$HistoryData" ]
                     then

@@ -41,7 +41,7 @@ You can run this script periodically by setting a Cron job:
 <starts-with>  - torrent name starting with a specified text
 ```
 
-All search queries are case sensitive.
+All search queries are case sensitive. Add `ignore-case="1"` attribute for case-insensitive search.
 
 ## Config example
 ```xml
@@ -50,14 +50,14 @@ All search queries are case sensitive.
   <history>/path/to/download_history</history>
   <feed>
     <url>https://example.com/rss1</url>
-    <contains>Search query 1</contains>
-    <contains>Search query 2</contains>
-    <starts-with>Search query 3</starts-with>
+    <contains>Search Text 1</contains>
+    <contains ignore-case="1">Search Text 2</contains>
+    <starts-with>Search Text 3</starts-with>
   </feed>
   <feed>
     <url>https://example.com/rss2</url>
-    <contains>Search query 1</contains>
-    <starts-with>Search query 2</starts-with>
+    <contains>Search Text 1</contains>
+    <starts-with ignore-case="1">Search Text 2</starts-with>
   </feed>
 </config>
 ```
