@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.5
+ SHELL RSS TORRENT v1.6
    Script by Rafostar
 ------------------------
 "
@@ -83,7 +83,7 @@ find_in_feed() {
     QueryPath="//config/feed[$1]/$QueryFn"
     QueryCount=$(xmllint_from_config "count($QueryPath)")
 
-    if [ ! -z "$QueryCount" ] && [ "$QueryCount" -ge 1 ]
+    if [ "$QueryCount" -ge 1 ]
     then
         query=1
         while [ $query -le $QueryCount ]
@@ -143,7 +143,7 @@ download_torrent() {
     wget -q --content-disposition -P "$WatchDir" "$1" 2> /dev/null
     if [ $? -ne 0 ]
     then
-        wget -P "$WatchDir" "$1" > /dev/null 2>&1
+        wget -P "$WatchDir" "$1" > /dev/null 2> /dev/null
         if [ $? -eq 0 ]
         then
             write_to_history "$1"
@@ -161,7 +161,13 @@ then
 else
     if [ -f "$ConfigPath" ]
     then
-        parse_config
+        XmlInstalled=$(xmllint --version > /dev/null 2> /dev/null)
+        if [ $? -eq 0 ]
+        then
+            parse_config
+        else
+            echo "Error: xmllint is not installed"
+        fi
     else
         echo "Error: file $ConfigPath does not exist"
     fi
