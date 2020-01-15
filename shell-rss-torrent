@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.4
+ SHELL RSS TORRENT v1.5
    Script by Rafostar
 ------------------------
 "
@@ -35,7 +35,8 @@ parse_config() {
         echo "Total feeds in config: $FeedsCount"
         echo ""
 
-        for (( feed=1; feed<=$FeedsCount; feed++ ))
+        feed=1
+        while [ $feed -le $FeedsCount ]
         do
             FeedUrl=$(xmllint_from_config "string(//config/feed[$feed]/url[1]/text())")
 
@@ -57,6 +58,8 @@ parse_config() {
                     done
                 fi
             fi
+
+            feed=$(( feed + 1 ))
         done
     fi
 }
@@ -82,7 +85,8 @@ find_in_feed() {
 
     if [ ! -z "$QueryCount" ] && [ "$QueryCount" -ge 1 ]
     then
-        for (( query=1; query<=$QueryCount; query++ ))
+        query=1
+        while [ $query -le $QueryCount ]
         do
             check_attributes $1
 
@@ -90,7 +94,8 @@ find_in_feed() {
             then
                 echo "$INDENT1 $QueryFn $query: $QueryText, found: $TorrentCount"
 
-                for (( torrent=1; torrent<=$TorrentCount; torrent++ ))
+                torrent=1
+                while [ $torrent -le $TorrentCount ]
                 do
                     TorrentLink=$(xmllint_from_feed "string($Matches[$torrent]/link/text())")
 
@@ -103,8 +108,12 @@ find_in_feed() {
                     else
                         download_torrent "$TorrentLink"
                     fi
+
+                    torrent=$(( torrent + 1 ))
                 done
             fi
+
+            query=$(( query + 1 ))
         done
     fi
 }
@@ -134,7 +143,7 @@ download_torrent() {
     wget -q --content-disposition -P "$WatchDir" "$1" 2> /dev/null
     if [ $? -ne 0 ]
     then
-        wget -q -P "$WatchDir" "$1" 2> /dev/null
+        wget -P "$WatchDir" "$1" > /dev/null 2>&1
         if [ $? -eq 0 ]
         then
             write_to_history "$1"
