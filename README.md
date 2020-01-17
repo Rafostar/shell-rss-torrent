@@ -32,7 +32,7 @@ The config file must be a valid XML file. You have to escape specific characters
 
 You can run this script periodically by setting a Cron job:
 ```sh
-*/10 * * * * /path/to/shell-rss-torrent "/path/to/config.xml" &> /dev/null
+*/10 * * * * /path/to/shell-rss-torrent "/path/to/config.xml" > /dev/null
 ```
 
 ## Supported search queries
