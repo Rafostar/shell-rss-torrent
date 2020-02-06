@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.6
+ SHELL RSS TORRENT v1.7
    Script by Rafostar
 ------------------------
 "
@@ -11,6 +11,7 @@ INDENT1="  "
 INDENT2="     "
 UPPER="ABCDEFGHIJKLMNOPQRSTUVWXYZ/ĄĆĘŁŃÓŚŹŻ"
 LOWER="abcdefghijklmnopqrstuvwxyz/ąćęłńóśźż"
+UA="Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/72.0"
 
 parse_config() {
     WatchDir=$(xmllint_from_config "string(//config/watchdir[1]/text())")
@@ -44,7 +45,12 @@ parse_config() {
             then
                 echo "Error: feed $feed has no URL"
             else
-                FeedData=$(wget -q -O - "$FeedUrl")
+                FeedData=$(wget -U "$UA" -O - "$FeedUrl" 2> /dev/null)
+
+                if [ -z "$FeedData" ]
+                then
+                    FeedData=$(wget -O - "$FeedUrl" 2> /dev/null)
+                fi
 
                 if [ -z "$FeedData" ]
                 then
@@ -97,16 +103,25 @@ find_in_feed() {
                 torrent=1
                 while [ $torrent -le $TorrentCount ]
                 do
-                    TorrentLink=$(xmllint_from_feed "string($Matches[$torrent]/link/text())")
-
-                    if [ ! -z "$HistoryData" ]
+                    TorrentLink=$(find_torrent_attr "enclosure")
+                    if [ -z "$TorrentLink" ]
                     then
-                        case "$HistoryData" in
-                            *"$TorrentLink"*) echo "$INDENT2 torrent $torrent in download history" ;;
-                            *) download_torrent "$TorrentLink" ;;
-                        esac
+                        TorrentLink=$(xmllint_from_feed "string($Matches[$torrent]/link/text())")
+                    fi
+
+                    if [ ! -z "$TorrentLink" ]
+                    then
+                        if [ ! -z "$HistoryData" ]
+                        then
+                            case "$HistoryData" in
+                                *"$TorrentLink"*) echo "$INDENT2 torrent $torrent in download history" ;;
+                                *) download_torrent "$TorrentLink" ;;
+                            esac
+                        else
+                            download_torrent "$TorrentLink"
+                        fi
                     else
-                        download_torrent "$TorrentLink"
+                        echo "$INDENT2 torrent $torrent without a link"
                     fi
 
                     torrent=$(( torrent + 1 ))
@@ -115,6 +130,22 @@ find_in_feed() {
 
             query=$(( query + 1 ))
         done
+    fi
+}
+
+find_torrent_attr() {
+    ATTR=$(xmllint_from_feed "count($Matches[$torrent]/$1)")
+    if [ "$ATTR" -eq 1 ]
+    then
+        ATTR_TORRENT=$(xmllint_from_feed "count($Matches[$torrent]/$1[@type='application/x-bittorrent'])")
+        if [ "$ATTR_TORRENT" -eq 1 ]
+        then
+            ATTR_URL=$(xmllint_from_feed "string($Matches[$torrent]/$1/@url)")
+            if [ ! -z "$ATTR_URL" ]
+            then
+                echo "$ATTR_URL"
+            fi
+        fi
     fi
 }
 
@@ -140,7 +171,7 @@ write_to_history() {
 download_torrent() {
     echo "$INDENT2 torrent $torrent: $1"
 
-    wget -q --content-disposition -P "$WatchDir" "$1" 2> /dev/null
+    wget -q --content-disposition -U "$UA" -P "$WatchDir" "$1" 2> /dev/null
     if [ $? -ne 0 ]
     then
         wget -P "$WatchDir" "$1" > /dev/null 2> /dev/null
