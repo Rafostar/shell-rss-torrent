@@ -43,21 +43,28 @@ You can run this script periodically by setting a Cron job:
 
 All search queries are case sensitive. Add `ignore-case="1"` attribute for case-insensitive search.
 
+Find a single torrent using multiple search queries by placing them inside `<multi>` tag.
+
 ## Config example
 ```xml
 <config>
-  <watchdir>/path/to/watchdir</watchdir>
-  <history>/path/to/download_history</history>
+  <watchdir>/tmp/watchdir</watchdir>
+  <history>/tmp/download_history</history>
   <feed>
     <url>https://example.com/rss1</url>
-    <contains>Search Text 1</contains>
-    <contains ignore-case="1">Search Text 2</contains>
-    <starts-with>Search Text 3</starts-with>
+    <contains>King Kong</contains>
+    <contains ignore-case="1">STAR WARS</contains>
+    <starts-with>The Terminator</starts-with>
   </feed>
   <feed>
     <url>https://example.com/rss2</url>
-    <contains>Search Text 1</contains>
-    <starts-with ignore-case="1">Search Text 2</starts-with>
+    <contains>Blade Runner</contains>
+    <starts-with ignore-case="1">BATman</starts-with>
+    <multi>
+      <contains>Back to the Future</contains>
+      <contains>BluRay</contains>
+      <contains>1080p</contains>
+    </multi>
   </feed>
 </config>
 ```

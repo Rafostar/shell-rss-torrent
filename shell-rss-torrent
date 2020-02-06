@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.7
+ SHELL RSS TORRENT v1.8
    Script by Rafostar
 ------------------------
 "
@@ -14,10 +14,13 @@ LOWER="abcdefghijklmnopqrstuvwxyz/ąćęłńóśźż"
 UA="Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/72.0"
 
 parse_config() {
-    WatchDir=$(xmllint_from_config "string(//config/watchdir[1]/text())")
-    if [ -z "$WatchDir" ]
+    WatchDir=$(xmllint --xpath "string(//config/watchdir[1]/text())" "$ConfigPath" 2> /dev/null)
+    if [ "$?" -ne 0 ]
     then
-        echo "Error: no <watchdir> in XML file"
+        echo "Error: invalid config file"
+    elif [ -z "$WatchDir" ]
+    then
+        echo "Error: no <watchdir> in config file"
     else
         echo "Torrents will be downloaded to: $WatchDir"
 
@@ -62,26 +65,13 @@ parse_config() {
                     do
                         find_in_feed $feed
                     done
+
+                    find_in_feed_multi $feed
                 fi
             fi
 
             feed=$(( feed + 1 ))
         done
-    fi
-}
-
-check_attributes() {
-    QueryText=$(xmllint_from_config "string($QueryPath[$query]/text())")
-    IgnoreCase=$(xmllint_from_config "count($QueryPath[$query][@ignore-case='1'])")
-
-    if [ "$IgnoreCase" -eq 1 ]
-    then
-        ParsedQuery=$(xmllint_from_config "translate($QueryPath[$query]/text(), '$UPPER', '$LOWER')")
-        Matches="//item[title[$QueryFn(translate(., '$UPPER', '$LOWER'), '$ParsedQuery')]]"
-        TorrentCount=$(xmllint_from_feed "count($Matches/link)")
-    else
-        Matches="//item[title[$QueryFn(., '$QueryText')]]"
-        TorrentCount=$(xmllint_from_feed "count($Matches/link)")
     fi
 }
 
@@ -94,42 +84,103 @@ find_in_feed() {
         query=1
         while [ $query -le $QueryCount ]
         do
-            check_attributes $1
+            find_attributes_matches $query
+            TorrentCount=$(xmllint_from_feed "count($Matches/link)")
+            echo "$INDENT1 $QueryFn $query: $QueryText, found: $TorrentCount"
 
-            if [ ! -z "$TorrentCount" ]
+            if [ "$TorrentCount" -ge 1 ]
             then
-                echo "$INDENT1 $QueryFn $query: $QueryText, found: $TorrentCount"
-
-                torrent=1
-                while [ $torrent -le $TorrentCount ]
-                do
-                    TorrentLink=$(find_torrent_attr "enclosure")
-                    if [ -z "$TorrentLink" ]
-                    then
-                        TorrentLink=$(xmllint_from_feed "string($Matches[$torrent]/link/text())")
-                    fi
-
-                    if [ ! -z "$TorrentLink" ]
-                    then
-                        if [ ! -z "$HistoryData" ]
-                        then
-                            case "$HistoryData" in
-                                *"$TorrentLink"*) echo "$INDENT2 torrent $torrent in download history" ;;
-                                *) download_torrent "$TorrentLink" ;;
-                            esac
-                        else
-                            download_torrent "$TorrentLink"
-                        fi
-                    else
-                        echo "$INDENT2 torrent $torrent without a link"
-                    fi
-
-                    torrent=$(( torrent + 1 ))
-                done
+                get_torrents
             fi
 
             query=$(( query + 1 ))
         done
+    fi
+}
+
+find_in_feed_multi() {
+    MultiPath="//config/feed[$1]/multi"
+    MultiCount=$(xmllint_from_config "count($MultiPath)")
+
+    if [ "$MultiCount" -ge 1 ]
+    then
+        multi=1
+        while [ $multi -le $MultiCount ]
+        do
+            QueryFn="starts-with"
+            QueryPath="$MultiPath[$multi]/$QueryFn"
+            QueryCount=$(xmllint_from_config "count($QueryPath)")
+            CustomFeed="$FeedData"
+            MultiText=""
+
+            if [ "$QueryCount" -ge 1 ]
+            then
+                find_attributes_matches "1"
+                CustomFeed=$(xmllint_from_feed "$Matches")
+
+                if [ ! -z "$CustomFeed" ]
+                then
+                    CustomFeed="<rss>$CustomFeed</rss>"
+                    MultiText="$QueryText"
+                else
+                    CustomFeed=""
+                    echo "$INDENT1 multi $multi: $QueryText, found: 0"
+                    return
+                fi
+            fi
+
+            QueryFn="contains"
+            QueryPath="$MultiPath[$multi]/$QueryFn"
+            QueryCount=$(xmllint_from_config "count($QueryPath)")
+
+            if [ "$QueryCount" -ge 1 ]
+            then
+                query=1
+                while [ $query -le $QueryCount ]
+                do
+                    find_attributes_matches "$query"
+                    CustomFeed=$(xmllint_from_feed "$Matches")
+
+                    if [ ! -z "$CustomFeed" ]
+                    then
+                        CustomFeed="<rss>$CustomFeed</rss>"
+
+                        if [ ! -z "$MultiText" ]
+                        then
+                            MultiText="$MultiText | $QueryText"
+                        else
+                            MultiText="$QueryText"
+                        fi
+                    else
+                        CustomFeed=""
+                        echo "$INDENT1 multi $multi: $QueryText, found: 0"
+                        return
+                    fi
+
+                    query=$(( query + 1 ))
+                done
+                get_torrents_multi $multi
+            else
+                get_torrents_multi $multi
+            fi
+
+            multi=$(( multi + 1 ))
+        done
+
+        CustomFeed=""
+    fi
+}
+
+find_attributes_matches() {
+    QueryText=$(xmllint_from_config "string($QueryPath[$1]/text())")
+    IgnoreCase=$(xmllint_from_config "count($QueryPath[$1][@ignore-case='1'])")
+
+    if [ "$IgnoreCase" -eq 1 ]
+    then
+        ParsedQuery=$(xmllint_from_config "translate($QueryPath[$query]/text(), '$UPPER', '$LOWER')")
+        Matches="//item[title[$QueryFn(translate(., '$UPPER', '$LOWER'), '$ParsedQuery')]]"
+    else
+        Matches="//item[title[$QueryFn(., '$QueryText')]]"
     fi
 }
 
@@ -149,13 +200,60 @@ find_torrent_attr() {
     fi
 }
 
+get_torrents() {
+    torrent=1
+    while [ $torrent -le $TorrentCount ]
+    do
+        TorrentLink=$(find_torrent_attr "enclosure")
+
+        if [ -z "$TorrentLink" ]
+        then
+            TorrentLink=$(xmllint_from_feed "string($Matches[$torrent]/link/text())")
+        fi
+
+        if [ ! -z "$TorrentLink" ]
+        then
+            if [ ! -z "$HistoryData" ]
+            then
+                case "$HistoryData" in
+                    *"$TorrentLink"*) echo "$INDENT2 torrent $torrent in download history" ;;
+                    *) download_torrent "$TorrentLink" ;;
+                esac
+            else
+                download_torrent "$TorrentLink"
+            fi
+        else
+            echo "$INDENT2 torrent $torrent without a link"
+        fi
+
+        torrent=$(( torrent + 1 ))
+    done
+}
+
+get_torrents_multi() {
+    TorrentCount=$(xmllint_from_feed "count($Matches/link)")
+    echo "$INDENT1 multi $1: $MultiText, found: $TorrentCount"
+
+    if [ "$TorrentCount" -ge 1 ]
+    then
+        get_torrents
+    fi
+}
+
 xmllint_from_config() {
     RESULT=$(xmllint --xpath "$1" "$ConfigPath" 2> /dev/null)
     echo "$RESULT"
 }
 
 xmllint_from_feed() {
-    RESULT=$(echo "$FeedData" | xmllint --format --xpath "$1" - 2> /dev/null)
+    if [ ! -z "$CustomFeed" ]
+    then
+        XmlData="$CustomFeed"
+    else
+        XmlData="$FeedData"
+    fi
+
+    RESULT=$(echo "$XmlData" | xmllint --format --xpath "$1" - 2> /dev/null)
     echo "$RESULT"
 }
 
