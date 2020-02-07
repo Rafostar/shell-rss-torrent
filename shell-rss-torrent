@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v2.1
+ SHELL RSS TORRENT v2.2
    Script by Rafostar
 ------------------------
 "
@@ -14,7 +14,7 @@ LOWER="abcdefghijklmnopqrstuvwxyz/ąćęłńóśźż"
 UA="Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/72.0"
 
 parse_config() {
-    WatchDir=$(xmllint --xpath "string(//config/watchdir[1]/text())" "$ConfigPath" 2> /dev/null)
+    WatchDir=$(echo "$ConfigData" | xmllint --xpath "string(//config/watchdir[1]/text())" - 2> /dev/null)
     if [ "$?" -ne 0 ]
     then
         echo "Error: invalid config file"
@@ -251,7 +251,7 @@ get_torrents_multi() {
 }
 
 xmllint_from_config() {
-    RESULT=$(xmllint --xpath "$1" "$ConfigPath" 2> /dev/null)
+    RESULT=$(echo "$ConfigData" | xmllint --xpath "$1" - 2> /dev/null)
     echo "$RESULT"
 }
 
@@ -322,6 +322,7 @@ else
         XmlInstalled=$(xmllint --version > /dev/null 2> /dev/null)
         if [ $? -eq 0 ]
         then
+            ConfigData=$(cat "$ConfigPath")
             parse_config
         else
             echo "Error: xmllint is not installed"
