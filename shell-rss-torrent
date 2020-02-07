@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.8
+ SHELL RSS TORRENT v1.9
    Script by Rafostar
 ------------------------
 "
@@ -61,7 +61,7 @@ parse_config() {
                 else
                     echo "feed $feed: $FeedUrl"
 
-                    for QueryFn in "contains" "starts-with"
+                    for QueryFn in "starts-with" "contains"
                     do
                         find_in_feed $feed
                     done
@@ -107,67 +107,51 @@ find_in_feed_multi() {
         multi=1
         while [ $multi -le $MultiCount ]
         do
-            QueryFn="starts-with"
-            QueryPath="$MultiPath[$multi]/$QueryFn"
-            QueryCount=$(xmllint_from_config "count($QueryPath)")
-            CustomFeed="$FeedData"
             MultiText=""
+            CustomFeed=""
 
-            if [ "$QueryCount" -ge 1 ]
-            then
-                find_attributes_matches "1"
-                CustomFeed=$(xmllint_from_feed "$Matches")
+            for QueryFn in "starts-with" "contains"
+            do
+                QueryPath="$MultiPath[$multi]/$QueryFn"
+                QueryCount=$(xmllint_from_config "count($QueryPath)")
 
-                if [ ! -z "$CustomFeed" ]
+                if [ "$QueryCount" -ge 1 ]
                 then
-                    CustomFeed="<rss>$CustomFeed</rss>"
-                    MultiText="$QueryText"
-                else
-                    CustomFeed=""
-                    echo "$INDENT1 multi $multi: $QueryText, found: 0"
-                    return
-                fi
-            fi
+                    query=1
+                    while [ $query -le $QueryCount ]
+                    do
+                        find_attributes_matches "$query"
+                        CustomFeed=$(xmllint_from_feed "$Matches")
 
-            QueryFn="contains"
-            QueryPath="$MultiPath[$multi]/$QueryFn"
-            QueryCount=$(xmllint_from_config "count($QueryPath)")
-
-            if [ "$QueryCount" -ge 1 ]
-            then
-                query=1
-                while [ $query -le $QueryCount ]
-                do
-                    find_attributes_matches "$query"
-                    CustomFeed=$(xmllint_from_feed "$Matches")
-
-                    if [ ! -z "$CustomFeed" ]
-                    then
-                        CustomFeed="<rss>$CustomFeed</rss>"
-
-                        if [ ! -z "$MultiText" ]
+                        if [ ! -z "$CustomFeed" ]
                         then
-                            MultiText="$MultiText | $QueryText"
-                        else
-                            MultiText="$QueryText"
-                        fi
-                    else
-                        CustomFeed=""
-                        echo "$INDENT1 multi $multi: $QueryText, found: 0"
-                        return
-                    fi
+                            CustomFeed="<rss>$CustomFeed</rss>"
 
-                    query=$(( query + 1 ))
-                done
+                            if [ ! -z "$MultiText" ]
+                            then
+                                MultiText="$MultiText | $QueryText"
+                            else
+                                MultiText="$QueryText"
+                            fi
+                        else
+                            CustomFeed=""
+                            echo "$INDENT1 multi $multi: $QueryText, found: 0"
+                            return
+                        fi
+
+                        query=$(( query + 1 ))
+                    done
+                fi
+            done
+
+            if [ ! -z "$CustomFeed" ]
+            then
                 get_torrents_multi $multi
-            else
-                get_torrents_multi $multi
+                CustomFeed=""
             fi
 
             multi=$(( multi + 1 ))
         done
-
-        CustomFeed=""
     fi
 }
 
