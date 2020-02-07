@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v1.9
+ SHELL RSS TORRENT v2.0
    Script by Rafostar
 ------------------------
 "
@@ -18,61 +18,77 @@ parse_config() {
     if [ "$?" -ne 0 ]
     then
         echo "Error: invalid config file"
-    elif [ -z "$WatchDir" ]
+        exit 1
+    fi
+
+    Downloader=$(xmllint_from_config "string(//config/downloader[1]/text())")
+    if [ ! -z "$Downloader" ]
     then
-        echo "Error: no <watchdir> in config file"
-    else
-        echo "Torrents will be downloaded to: $WatchDir"
+        echo "Using <downloader> tag command"
+        DwnPrint=$(xmllint_from_config "count(//config/downloader[1][@print='1'])")
 
-        HistoryPath=$(xmllint_from_config "string(//config/history[1]/text())")
-        if [ ! -z "$HistoryPath" ]
+        if [ -z "$WatchDir" ]
         then
-            echo "Using download history file: $HistoryPath"
+            echo "Downloading without <watchdir> tag"
+        fi
+    else
+        if [ ! -z "$WatchDir" ]
+        then
+            echo "Torrents will be downloaded to: $WatchDir"
+        else
+            echo "Error: no <watchdir> in config file"
+            exit 1
+        fi
+    fi
 
-            if [ -f "$HistoryPath" ]
+    HistoryPath=$(xmllint_from_config "string(//config/history[1]/text())")
+    if [ ! -z "$HistoryPath" ]
+    then
+        echo "Using download history file: $HistoryPath"
+
+        if [ -f "$HistoryPath" ]
+        then
+            HistoryData=$(cat "$HistoryPath")
+        fi
+    fi
+
+    FeedsCount=$(xmllint_from_config "count(//config/feed)")
+    echo "Total feeds in config: $FeedsCount"
+    echo ""
+
+    feed=1
+    while [ $feed -le $FeedsCount ]
+    do
+        FeedUrl=$(xmllint_from_config "string(//config/feed[$feed]/url[1]/text())")
+
+        if [ -z "$FeedUrl" ]
+        then
+            echo "Error: feed $feed has no URL"
+        else
+            FeedData=$(wget -U "$UA" -O - "$FeedUrl" 2> /dev/null)
+
+            if [ -z "$FeedData" ]
             then
-                HistoryData=$(cat "$HistoryPath")
+                FeedData=$(wget -O - "$FeedUrl" 2> /dev/null)
+            fi
+
+            if [ -z "$FeedData" ]
+            then
+                echo "Error: feed $feed has no data"
+            else
+                echo "feed $feed: $FeedUrl"
+
+                for QueryFn in "starts-with" "contains"
+                do
+                    find_in_feed $feed
+                done
+
+                find_in_feed_multi $feed
             fi
         fi
 
-        FeedsCount=$(xmllint_from_config "count(//config/feed)")
-        echo "Total feeds in config: $FeedsCount"
-        echo ""
-
-        feed=1
-        while [ $feed -le $FeedsCount ]
-        do
-            FeedUrl=$(xmllint_from_config "string(//config/feed[$feed]/url[1]/text())")
-
-            if [ -z "$FeedUrl" ]
-            then
-                echo "Error: feed $feed has no URL"
-            else
-                FeedData=$(wget -U "$UA" -O - "$FeedUrl" 2> /dev/null)
-
-                if [ -z "$FeedData" ]
-                then
-                    FeedData=$(wget -O - "$FeedUrl" 2> /dev/null)
-                fi
-
-                if [ -z "$FeedData" ]
-                then
-                    echo "Error: feed $feed has no data"
-                else
-                    echo "feed $feed: $FeedUrl"
-
-                    for QueryFn in "starts-with" "contains"
-                    do
-                        find_in_feed $feed
-                    done
-
-                    find_in_feed_multi $feed
-                fi
-            fi
-
-            feed=$(( feed + 1 ))
-        done
-    fi
+        feed=$(( feed + 1 ))
+    done
 }
 
 find_in_feed() {
@@ -253,16 +269,35 @@ write_to_history() {
 download_torrent() {
     echo "$INDENT2 torrent $torrent: $1"
 
-    wget -q --content-disposition -U "$UA" -P "$WatchDir" "$1" 2> /dev/null
-    if [ $? -ne 0 ]
+    if [ ! -z "$Downloader" ]
     then
-        wget -P "$WatchDir" "$1" > /dev/null 2> /dev/null
+        if [ "$DwnPrint" -eq 1 ]
+        then
+            eval '$Downloader "$1"'
+        else
+            eval '$Downloader "$1"' > /dev/null 2> /dev/null
+        fi
+
         if [ $? -eq 0 ]
         then
             write_to_history "$1"
+        else
+            echo "$INDENT1 $INDENT2 download failed"
         fi
     else
-        write_to_history "$1"
+        wget -q --content-disposition -U "$UA" -P "$WatchDir" "$1" 2> /dev/null
+        if [ $? -ne 0 ]
+        then
+            wget -P "$WatchDir" "$1" > /dev/null 2> /dev/null
+            if [ $? -eq 0 ]
+            then
+                write_to_history "$1"
+            else
+                echo "$INDENT1 $INDENT2 download failed"
+            fi
+        else
+            write_to_history "$1"
+       fi
     fi
 }
 
@@ -280,8 +315,10 @@ else
             parse_config
         else
             echo "Error: xmllint is not installed"
+            exit 1
         fi
     else
         echo "Error: file $ConfigPath does not exist"
+        exit 1
     fi
 fi

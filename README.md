@@ -45,6 +45,21 @@ All search queries are case sensitive. Add `ignore-case="1"` attribute for case-
 
 Find a single torrent using multiple search queries by placing them inside `<multi>` tag.
 
+## Custom download command
+It is possible to pass the torrent/magnet link obtained with the script to custom download application instead of default `wget`.
+To do this add `<downloader>` tag with the command line args in the root of your config file.
+
+Examples:
+```xml
+<downloader>wget -U "$UA" -P "$WatchDir"</downloader> - use wget (default)
+<downloader>transmission-remote -a</downloader>       - add torrent to transmission
+<downloader print="1">tget</downloader>               - use tget app to download
+```
+
+These are only examples. Inside this tag can be any command you want. Please note that the script will append the torrent link to the end of written command (after space). You can optionally use `$UA` and `$WatchDir` variables if you need to pass a fake `user-agent` or `<watchdir>` to your command.
+
+If you want to run downloader with output to the command line use `<downloader print="1">` tag.
+
 ## Config example
 ```xml
 <config>
