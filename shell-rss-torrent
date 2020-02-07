@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v2.0
+ SHELL RSS TORRENT v2.1
    Script by Rafostar
 ------------------------
 "
@@ -59,17 +59,27 @@ parse_config() {
     feed=1
     while [ $feed -le $FeedsCount ]
     do
-        FeedUrl=$(xmllint_from_config "string(//config/feed[$feed]/url[1]/text())")
-
+        FeedUrl=$(xmllint_from_config "string(//config/feed[$feed]/@url)")
         if [ -z "$FeedUrl" ]
         then
-            echo "Error: feed $feed has no URL"
+            echo "Error: feed $feed has no url"
         else
-            FeedData=$(wget -U "$UA" -O - "$FeedUrl" 2> /dev/null)
+            FeedUser=$(xmllint_from_config "string(//config/feed[$feed]/@user)")
+            if [ ! -z "$FeedUser" ]
+            then
+                FeedUser="--user=$FeedUser"
+            fi
 
+            FeedPass=$(xmllint_from_config "string(//config/feed[$feed]/@pass)")
+            if [ ! -z "$FeedPass" ]
+            then
+                FeedPass="--password=$FeedPass"
+            fi
+
+            FeedData=$(wget "$FeedUser" "$FeedPass" -U "$UA" -O - "$FeedUrl" 2> /dev/null)
             if [ -z "$FeedData" ]
             then
-                FeedData=$(wget -O - "$FeedUrl" 2> /dev/null)
+                FeedData=$(wget "$FeedUser" "$FeedPass" -O - "$FeedUrl" 2> /dev/null)
             fi
 
             if [ -z "$FeedData" ]

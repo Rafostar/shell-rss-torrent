@@ -65,14 +65,12 @@ If you want to run downloader with output to the command line use `<downloader p
 <config>
   <watchdir>/tmp/watchdir</watchdir>
   <history>/tmp/download_history</history>
-  <feed>
-    <url>https://example.com/rss1</url>
+  <feed url="https://example.com/rss1">
     <contains>King Kong</contains>
     <contains ignore-case="1">STAR WARS</contains>
     <starts-with>The Terminator</starts-with>
   </feed>
-  <feed>
-    <url>https://example.com/rss2</url>
+  <feed user="login" pass="password" url="https://example.com/rss2">
     <contains>Blade Runner</contains>
     <starts-with ignore-case="1">BATman</starts-with>
     <multi>
