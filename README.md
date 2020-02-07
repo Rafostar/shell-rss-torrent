@@ -5,7 +5,7 @@ Requires:
 * libXML2 (`xmllint` binary)
 * wget
 
-The script is intended to be used with a torrent client that supports importing new torrent files from a watch dir (e.g. Transmission).
+By default the script will download torrents using `wget` into a specified directory and is intended to be used with a torrent client that supports importing new torrent files from a watch dir (e.g. Transmission). This behaviour can be altered with a custom config file. Script supports passing torrents links into any other app, therefore making it compatible with a wide range of clients.
 
 Remember to mark this script as executable after download (`chmod +x ./shell-rss-torrent`).
 
@@ -58,7 +58,7 @@ Examples:
 
 These are only examples. Inside this tag can be any command you want. Please note that the script will append the torrent link to the end of written command (after space). You can optionally use `$UA` and `$WatchDir` variables if you need to pass a fake `user-agent` or `<watchdir>` to your command.
 
-If you want to run downloader with output to the command line use `<downloader print="1">` tag.
+If you want to run downloader with its output to the command line use `<downloader print="1">` tag.
 
 ## Config example
 ```xml
