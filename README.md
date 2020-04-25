@@ -11,7 +11,7 @@ Remember to mark this script as executable after download (`chmod +x ./shell-rss
 
 Specify path to the watch dir in config file with `<watchdir>`. You can optionally use `<history>` with a path to the file that will store this script download history, so the script won't download the same torrent on the next run.
 
-To make this script work on OpenWRT you need to install `libxml2-utils` (available in official OpenWRT packages). The script should work with the simplified busybox version of `wget`, but the full version will support more websites.
+To make this script work on OpenWRT you need to install `libxml2-utils` (available in official OpenWRT packages). If you plan to use the optional `<time-max>` tag, then full version of GNU date is required (OpenWRT `coreutils-date` package). The script should work with the simplified busybox version of `wget`, but the full version will support more websites.
 
 ## Usage
 The script will parse all queries inside user created `config.xml` file. Launch the script while providing the path to the configuration file.
