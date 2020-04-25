@@ -11,7 +11,7 @@ Remember to mark this script as executable after download (`chmod +x ./shell-rss
 
 Specify path to the watch dir in config file with `<watchdir>`. You can optionally use `<history>` with a path to the file that will store this script download history, so the script won't download the same torrent on the next run.
 
-To make this script work on OpenWRT you need to install `libxml2` (available in official OpenWRT packages). The script should work with the simplified busybox version of `wget`, but the full version will support more websites.
+To make this script work on OpenWRT you need to install `libxml2-utils` (available in official OpenWRT packages). The script should work with the simplified busybox version of `wget`, but the full version will support more websites.
 
 ## Usage
 The script will parse all queries inside user created `config.xml` file. Launch the script while providing the path to the configuration file.
@@ -56,7 +56,20 @@ Examples:
 <downloader print="1">tget</downloader>               - use tget app to download
 ```
 
-These are only examples. Inside this tag can be any command you want. Please note that the script will append the torrent link to the end of written command (after space). You can optionally use `$UA`, `$WatchDir` and `$Title` variables if you need to pass a fake `user-agent`, `<watchdir>` or torrent name to your command.
+These are only examples. Inside this tag can be any command you want. Please note that the script will append the torrent link to the end of written command (after space). You can optionally use these variables inside downloader command:
+* `$UA` - user agent
+* `$WatchDir` - path to watchir set in config
+* `$HistoryPath` - path to torrent history file set in config
+* `$FeedsCount` - total number of feeds in config
+* `$FeedUrl` - link to current feed set in config
+* `$Title` - item title tag value
+
+Time related variables (only available when `<time-max>` was set in config file):
+* `$TimeMax` - max elapsed time set in config
+* `$PubDate` - item pubDate tag value
+* `$TorrentEpoch` - value of `$PubDate` converted to seconds in local time
+* `$CurrentEpoch` - current epoch time (in seconds)
+* `$Elapsed` - time in seconds elapsed from item release
 
 If you want to run downloader with its output to the command line use `<downloader print="1">` tag.
 
