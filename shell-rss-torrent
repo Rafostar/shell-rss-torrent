@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v2.2
+ SHELL RSS TORRENT v2.3
    Script by Rafostar
 ------------------------
 "
@@ -281,11 +281,13 @@ download_torrent() {
 
     if [ ! -z "$Downloader" ]
     then
+        Title=$(xmllint_from_feed "string($Matches[$torrent]/title/text())")
+
         if [ "$DwnPrint" -eq 1 ]
         then
-            eval '$Downloader "$1"'
+            eval "$Downloader "$1""
         else
-            eval '$Downloader "$1"' > /dev/null 2> /dev/null
+            eval "$Downloader "$1"" > /dev/null 2> /dev/null
         fi
 
         if [ $? -eq 0 ]

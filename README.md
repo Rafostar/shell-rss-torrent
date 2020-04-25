@@ -56,7 +56,7 @@ Examples:
 <downloader print="1">tget</downloader>               - use tget app to download
 ```
 
-These are only examples. Inside this tag can be any command you want. Please note that the script will append the torrent link to the end of written command (after space). You can optionally use `$UA` and `$WatchDir` variables if you need to pass a fake `user-agent` or `<watchdir>` to your command.
+These are only examples. Inside this tag can be any command you want. Please note that the script will append the torrent link to the end of written command (after space). You can optionally use `$UA`, `$WatchDir` and `$Title` variables if you need to pass a fake `user-agent`, `<watchdir>` or torrent name to your command.
 
 If you want to run downloader with its output to the command line use `<downloader print="1">` tag.
 
