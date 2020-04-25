@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v2.3
+ SHELL RSS TORRENT v2.4
    Script by Rafostar
 ------------------------
 "
@@ -50,6 +50,12 @@ parse_config() {
         then
             HistoryData=$(cat "$HistoryPath")
         fi
+    fi
+
+    TimeMax=$(xmllint_from_config "string(//config/time-max[1]/text())")
+    if [ ! -z "$TimeMax" ]
+    then
+        echo "Downloading releases within seconds: $TimeMax"
     fi
 
     FeedsCount=$(xmllint_from_config "count(//config/feed)")
@@ -227,10 +233,10 @@ get_torrents() {
             then
                 case "$HistoryData" in
                     *"$TorrentLink"*) echo "$INDENT2 torrent $torrent in download history" ;;
-                    *) download_torrent "$TorrentLink" ;;
+                    *) try_download ;;
                 esac
             else
-                download_torrent "$TorrentLink"
+                try_download
             fi
         else
             echo "$INDENT2 torrent $torrent without a link"
@@ -274,6 +280,35 @@ write_to_history() {
     fi
 
     HistoryData=$(echo -e "$HistoryData\n$1")
+}
+
+try_download() {
+    if [ ! -z "$TimeMax" ]
+    then
+        check_date
+    else
+        download_torrent "$TorrentLink"
+    fi
+}
+
+check_date() {
+    DateCount=$(xmllint_from_feed "count($Matches[$torrent]/pubDate)")
+    if [ "$DateCount" -ge 1 ]
+    then
+        PubDate=$(xmllint_from_feed "string($Matches[$torrent]/pubDate/text())")
+        if [ ! -z "$PubDate" ]
+        then
+            TorrentEpoch=$(date -d "$PubDate" +%s)
+            CurrentEpoch=$(date +%s)
+            Elapsed=$((CurrentEpoch - TorrentEpoch))
+            if [ "$Elapsed" -le $TimeMax ]
+            then
+                download_torrent "$TorrentLink"
+            fi
+        fi
+    else
+        download_torrent "$TorrentLink"
+    fi
 }
 
 download_torrent() {
