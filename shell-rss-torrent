@@ -2,7 +2,7 @@
 
 echo "
 ------------------------
- SHELL RSS TORRENT v2.4
+ SHELL RSS TORRENT v2.5
    Script by Rafostar
 ------------------------
 "
@@ -304,6 +304,8 @@ check_date() {
             if [ "$Elapsed" -le $TimeMax ]
             then
                 download_torrent "$TorrentLink"
+            else
+                echo "$INDENT2 torrent $torrent is too old"
             fi
         fi
     else
